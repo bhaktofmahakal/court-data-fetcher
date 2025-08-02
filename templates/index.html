@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Data Fetcher - Delhi High Court</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+
+        .header-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        .result-card {
+            margin-top: 2rem;
+            display: none;
+        }
+        .loading {
+            display: none;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+        .history-section {
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header-bg">
+        <div class="container">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <h1><i class="fas fa-gavel"></i> Court Data Fetcher</h1>
+                    <p class="lead">Delhi High Court Case Status Search</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Search Form -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-search"></i> Search Case Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="searchForm">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="case_type" class="form-label">Case Type</label>
+                                    <select class="form-select" id="case_type" name="case_type" required>
+                                        <option value="">Select Case Type</option>
+                                        <option value="W.P.(C)">W.P.(C)</option>  
+                                        <option value="W.P.(CRL)">W.P.(CRL)</option>
+                                        <option value="LPA">LPA</option>
+                                        <option value="CRL.A.">CRL.A.</option>
+                                        <option value="CRL.M.C.">CRL.M.C.</option>
+                                        <option value="CO.PET.">CO.PET.</option>
+                                        <option value="CONT.CAS(C)">CONT.CAS(C)</option>
+                                        <option value="FAO">FAO</option>
+                                        <option value="RFA">RFA</option>
+                                        <option value="CS(OS)">CS(OS)</option>
+                                        <option value="O.M.P.">O.M.P.</option>
+                                        <option value="ARB.P.">ARB.P.</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="case_number" class="form-label">Case Number</label>
+                                    <input type="text" class="form-control" id="case_number" name="case_number" 
+                                           placeholder="e.g., 1234" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="case_year" class="form-label">Case Year</label>
+                                    <input type="number" class="form-control" id="case_year" name="case_year" 
+                                           placeholder="e.g., 2024" min="1950" max="2024" required>
+                                </div>
+                            </div>
+                            
+                            <!-- CAPTCHA Section -->
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>CAPTCHA Notice:</strong> If the court website shows a CAPTCHA, 
+                                        please solve it manually and enter the token below.
+                                    </div>
+                                    <label for="captcha_token" class="form-label">Manual CAPTCHA Token (if required)</label>
+                                    <input type="text" class="form-control" id="captcha_token" name="captcha_token" 
+                                           placeholder="Enter CAPTCHA solution if prompted">
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-search"></i> Search Case
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <!-- Loading Indicator -->
+                        <div class="loading text-center mt-3">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Searching court records...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <div class="card result-card" id="resultCard">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-file-alt"></i> Case Details</h5>
+                    </div>
+                    <div class="card-body" id="resultContent">
+                       
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="history-section">
+            <div class="row justify-content-center">
+                <div class="col-md-10">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> Recent Searches</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="loadHistory()">
+                                <i class="fas fa-refresh"></i> Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="historyContent">
+                                <p class="text-muted">Click refresh to load recent searches...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-4">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Court Data Fetcher. Built for educational purposes.</p>
+            <p class="text-muted">Data sourced from Delhi High Court official website</p>
+        </div>
+    </footer>
+<!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+
+    <script>
+        // Handle form submission
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const loading = document.querySelector('.loading');
+            const resultCard = document.getElementById('resultCard');
+            
+            // Show loading
+            loading.style.display = 'block';
+            resultCard.style.display = 'none';
+            
+            try {
+                const response = await fetch('/search', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                displayResults(data);
+                
+            } catch (error) {
+                displayError('Network error: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        });
+        
+        function displayResults(data) {
+            const resultCard = document.getElementById('resultCard');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (data.error) {
+                resultContent.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Error:</strong> ${data.error}
+                    </div>
+                `;
+            } else if (data.status === 'Found') {
+                resultContent.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <strong>Case Found!</strong> Details retrieved successfully.
+                    </div>
+                    
+                    <!-- Case Summary Card -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0"><i class="fas fa-gavel"></i> Case Summary</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <strong>Case Type:</strong> ${data.case_type || 'N/A'}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>Case Number:</strong> ${data.case_number || 'N/A'}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <strong>Case Year:</strong> ${data.case_year || 'N/A'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Parties Information -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-users text-primary"></i> Parties Involved</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info mb-0">
+                                        <strong>${data.parties || 'Not available'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Dates Information -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-calendar-plus text-success"></i> Filing Date</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-0 ${data.filing_date && data.filing_date !== 'Not available' ? 'text-success fw-bold' : 'text-muted'}">
+                                        ${data.filing_date || 'Not available'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-clock text-warning"></i> Next Hearing</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="${data.next_hearing_date && data.next_hearing_date !== 'Not available' ? 'text-warning fw-bold' : 'text-muted'}">
+                                        ${formatHearingDate(data.next_hearing_date)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Documents Section -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-file-pdf text-danger"></i> Documents & Orders</h6>
+                                </div>
+                                <div class="card-body text-center">
+                                    ${data.order_judgment_link ? 
+                                        `<a href="${data.order_judgment_link}" target="_blank" class="btn btn-danger btn-lg">
+                                            <i class="fas fa-external-link-alt"></i> View Orders & Judgments
+                                        </a>
+                                        <p class="text-muted mt-2">Click to view detailed case information and download documents</p>` : 
+                                        `<div class="alert alert-secondary mb-0">
+                                            <i class="fas fa-info-circle"></i> No documents available for download
+                                        </div>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Badge -->
+                    <div class="row">
+                        <div class="col-12 text-center">
+                            <span class="badge ${getCaseStatusBadge(data.case_status)} fs-6 p-2">
+                                <i class="fas fa-gavel"></i> Case Status: ${data.case_status || 'ACTIVE'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                resultContent.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Search Completed:</strong> No case found with the provided details.
+                        <br><br>
+                        <strong>Scraper Status:</strong> Successfully connected to Delhi High Court website
+                        <br><strong>Result:</strong> Case ${data.case_number || 'N/A'}/${data.case_year || 'N/A'} not found in court records
+                        <br><br>
+                        <small class="text-muted">
+                            <strong>Possible reasons:</strong><br>
+                            • Case number/year combination doesn't exist<br>
+                            • Case might be in a different case type category<br>
+                            • Court website may require CAPTCHA verification<br>
+                            • Case might be sealed or not publicly accessible
+                        </small>
+                    </div>
+                `;
+            }
+            
+            resultCard.style.display = 'block';
+            resultCard.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function displayError(message) {
+            const resultCard = document.getElementById('resultCard');
+            const resultContent = document.getElementById('resultContent');
+            
+            resultContent.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+            
+            resultCard.style.display = 'block';
+        }
+
+        function formatHearingDate(hearingDate) {
+            if (!hearingDate || hearingDate === 'Not available') {
+                return 'Not available';
+            }
+            
+            // Parse hearing date 
+            const nextDateMatch = hearingDate.match(/NEXT DATE:\s*(\d{2}\/\d{2}\/\d{4})/);
+            const lastDateMatch = hearingDate.match(/Last Date:\s*(\d{2}\/\d{2}\/\d{4})/);
+            const courtNoMatch = hearingDate.match(/COURT NO:\s*(\d+)/);
+            
+            let formatted = '';
+            
+            if (nextDateMatch) {
+                formatted += `<div><i class="fas fa-calendar-alt"></i> <strong>Next Date:</strong> ${nextDateMatch[1]}</div>`;
+            }
+            
+            if (lastDateMatch) {
+                formatted += `<div><i class="fas fa-history"></i> <strong>Last Date:</strong> ${lastDateMatch[1]}</div>`;
+            }
+            
+            if (courtNoMatch) {
+                formatted += `<div><i class="fas fa-building"></i> <strong>Court No:</strong> ${courtNoMatch[1]}</div>`;
+            }
+            
+            return formatted || hearingDate;
+        }
+
+        function getCaseStatusBadge(status) {
+            if (!status) return 'bg-success';
+            
+            const statusUpper = status.toUpperCase();
+            
+            switch(statusUpper) {
+                case 'PENDING':
+                    return 'bg-warning';
+                case 'DISPOSED':
+                case 'DECIDED':
+                    return 'bg-info';
+                case 'DISMISSED':
+                    return 'bg-secondary';
+                case 'ALLOWED':
+                    return 'bg-success';
+                case 'ACTIVE':
+                default:
+                    return 'bg-primary';
+            }
+        }
+        
+        // Load query history
+        async function loadHistory() {
+            try {
+                const response = await fetch('/history');
+                const history = await response.json();
+                
+                const historyContent = document.getElementById('historyContent');
+                
+                if (history.length === 0) {
+                    historyContent.innerHTML = '<p class="text-muted">No search history available.</p>';
+                    return;
+                }
+                
+                let historyHtml = '<div class="table-responsive"><table class="table table-sm">';
+                historyHtml += '<thead><tr><th>Case Type</th><th>Number</th><th>Year</th><th>Date</th><th>Status</th></tr></thead><tbody>';
+                
+                history.forEach(item => {
+                    const date = new Date(item.timestamp).toLocaleString();
+                    const statusClass = item.status === 'Found' ? 'success' : 
+                                       item.status === 'Not Found' ? 'warning' : 'danger';
+                    
+                    historyHtml += `
+                        <tr>
+                            <td>${item.case_type}</td>
+                            <td>${item.case_number}</td>
+                            <td>${item.case_year}</td>
+                            <td>${date}</td>
+                            <td><span class="badge bg-${statusClass}">${item.status}</span></td>
+                        </tr>
+                    `;
+                });
+                
+                historyHtml += '</tbody></table></div>';
+                historyContent.innerHTML = historyHtml;
+                
+            } catch (error) {
+                document.getElementById('historyContent').innerHTML = 
+                    '<p class="text-danger">Error loading history: ' + error.message + '</p>';
+            }
+        }
+        
+        // Load history 
+        window.addEventListener('load', loadHistory);
+    </script>
+</body>
+</html>
