@@ -33,17 +33,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
         
-        # Install ChromeDriver using webdriver-manager (more reliable)
-        # This will be handled by webdriver-manager in the Python code
-        # But we'll install a fallback version for CI
-        CHROMEDRIVER_VERSION="131.0.6778.87"
-        wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/${CHROMEDRIVER_VERSION}/linux64/chromedriver-linux64.zip"
-        sudo unzip /tmp/chromedriver.zip -d /tmp/
-        sudo mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/
+        # Install ChromeDriver (Updated for latest Chrome compatibility)
+        CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1)
+        CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
+        sudo unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
         sudo chmod +x /usr/local/bin/chromedriver
-        
-        # Verify installation
-        chromedriver --version || echo "ChromeDriver installation may have issues"
     
     - name: Cache pip packages
       uses: actions/cache@v3
