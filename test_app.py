@@ -5,11 +5,12 @@ import pytest
 import os
 import sys
 
-# Add the current directory to Python path
+# Add the current directory to  path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def test_imports():
-    """Test that all required modules can be imported"""
+    """Test that all required modulesd"""
+
     try:
         import flask
         import requests
@@ -21,6 +22,7 @@ def test_imports():
 
 def test_app_creation():
     """Test that Flask app can be created"""
+
     try:
         from app import app
         assert app is not None
@@ -30,6 +32,7 @@ def test_app_creation():
 
 def test_database_directory():
     """Test that database directory can be created"""
+    
     try:
         from app import init_db
         init_db()

@@ -125,6 +125,17 @@ docker-compose up --build
 # Optional - defaults work for most cases
 FLASK_ENV=production
 FLASK_APP=app.py
+FLASK_DEBUG=false          # Set to 'true' for development only
+FLASK_HOST=127.0.0.1       # Use '0.0.0.0' for Docker/production
+FLASK_PORT=5000            # Default port
+```
+
+### **Development Mode**
+```bash
+# For local development with debug mode
+export FLASK_DEBUG=true
+export FLASK_HOST=127.0.0.1
+python app.py
 ```
 
 ### **Court Website**
