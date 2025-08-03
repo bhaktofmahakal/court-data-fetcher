@@ -11,3 +11,5 @@ itsdangerous==2.1.2
 click==8.1.7
 blinker==1.6.3
 webdriver-manager==4.0.1
+pytest==7.4.3
+pytest-cov==4.1.0

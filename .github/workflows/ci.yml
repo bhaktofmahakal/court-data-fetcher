@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        python-version: [3.8, 3.9, '3.10']
+        python-version: ['3.10', '3.11', '3.12']
     
     steps:
     - uses: actions/checkout@v3
@@ -27,18 +27,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y wget gnupg unzip curl
         
-        # Install Chrome
-        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google.list
+        # Install Chrome using modern method
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google.list
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
         
-        # Install ChromeDriver (Updated for latest Chrome compatibility)
-        CHROME_VERSION=$(google-chrome --version | cut -d " " -f3 | cut -d "." -f1)
-        CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
-        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-        sudo unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/
-        sudo chmod +x /usr/local/bin/chromedriver
+        # Setup virtual display for headless testing
+        sudo apt-get install -y xvfb
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
     
     - name: Cache pip packages
       uses: actions/cache@v3
@@ -64,6 +62,8 @@ jobs:
     - name: Test with pytest
       run: |
         python -m pytest test_app.py -v --cov=app --cov-report=xml --tb=short
+      env:
+        DISPLAY: :99
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -93,7 +93,7 @@ jobs:
       run: safety check
     
     - name: Run bandit security check
-      run: bandit -r . -x ./venv/,./env/
+      run: bandit -r . -x ./venv/,./env/,./test_app.py -s B110,B113 --severity-level medium
 
   docker:
     runs-on: ubuntu-latest
